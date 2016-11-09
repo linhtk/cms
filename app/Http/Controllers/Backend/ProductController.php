@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use cms\Http\Requests;
 use cms\Http\Controllers\Controller;
 
+
 class ProductController extends Controller
 {
     protected $product;
@@ -31,10 +32,10 @@ class ProductController extends Controller
         return view('backend.product.index', compact('products', 'categories'));
     }
 
-    public function create(Categories $category)
+    public function create(Product $product)
     {
-        $parents = $this->getParent();
-        return view('backend.categories.form', compact('category', 'parents'));
+        $categories = $this->getCategory();
+        return view('backend.product.form', compact('product', 'categories'));
     }
 
     /**
@@ -45,9 +46,31 @@ class ProductController extends Controller
      */
     public function store(Requests\StoreProductRequest $request)
     {
-        $category = $this->category->create($request->only('name', 'parent_id', 'has_child', 'position', 'active', 'hidden'));
+        $filename1 = '';
+        $filename2 = '';
+        $filename3 = '';
+        if(Input::file('image1'))
+        {
+            //image1
+            $image1 = Input::file('image1');
+            $filename1  = time() . '.' . $image1->getClientOriginalExtension();
+            $path = public_path('product/' . $filename1);
+            Image::make($image1->getRealPath())->resize(200, 200)->save($path);
+            //image2
+            $image2 = Input::file('image2');
+            $filename2  = time() . '.' . $image2->getClientOriginalExtension();
+            $path = public_path('product/' . $filename2);
+            Image::make($image2->getRealPath())->resize(200, 200)->save($path);
+            //image3
+            $image3 = Input::file('image3');
+            $filename3  = time() . '.' . $image3->getClientOriginalExtension();
+            $path = public_path('product/' . $filename3);
+            Image::make($image3->getRealPath())->resize(200, 200)->save($path);
 
-        return redirect(route('backend.categories.index'))->with('status', 'Category has been created.');
+        }
+        $product = $this->product->create($request->only('name', 'category_id', 'short_desc', 'description', $filename1, $filename2, $filename3, 'is_hot', 'is_sale', 'price', 'sale_price', 'position', 'active'));
+
+        return redirect(route('backend.product.index'))->with('status', 'Product has been created.');
     }
 
     /**
@@ -58,10 +81,10 @@ class ProductController extends Controller
      */
     public function edit($id)
     {
-        $category = $this->category->findOrFail($id);
-        $parents = $this->getParent();
+        $product = $this->product->findOrFail($id);
+        $categories = $this->getCategory();
 
-        return view('backend.categories.form', compact('category','parents'));
+        return view('backend.product.form', compact('product','categories'));
     }
 
     /**
@@ -71,24 +94,24 @@ class ProductController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Requests\UpdateCategoriesRequest $request, $id)
+    public function update(Requests\UpdateProductRequest $request, $id)
     {
-        $category = $this->category->findOrFail($id);
+        $product = $this->product->findOrFail($id);
 
-        if ($response = $this->updateCategoryOrder($category, $request)) {
-            return $response;
-        }
+        $filename1 = $this->fileUpload($request, 'image1');
+        $filename2 = $this->fileUpload($request, 'image2');
+        $filename3 = $this->fileUpload($request, 'image3');
 
-        $category->fill($request->only('name', 'parent_id', 'has_child', 'position', 'active', 'hidden'))->save();
+        $product->fill($request->only('name', 'category_id', 'short_desc', 'description', $filename1, $filename2, $filename3, 'is_hot', 'is_sale', 'price', 'sale_price', 'position', 'active'));
 
-        return redirect(route('backend.categories.edit', $category->id))->with('status', 'Category has been updated.');
+        return redirect(route('backend.product.edit', $product->id))->with('status', 'Product has been updated.');
     }
 
     public function confirm($id)
     {
-        $category = $this->category->findOrFail($id);
+        $product = $this->product->findOrFail($id);
 
-        return view('backend.categories.confirm', compact('category'));
+        return view('backend.product.confirm', compact('product'));
     }
 
     /**
@@ -99,11 +122,11 @@ class ProductController extends Controller
      */
     public function destroy($id)
     {
-        $category = $this->category->findOrFail($id);
+        $product = $this->product->findOrFail($id);
 
-        $category->delete();
+        $product->delete();
 
-        return redirect(route('backend.categories.index'))->with('status', 'Category has been deleted.');
+        return redirect(route('backend.product.index'))->with('status', 'Product has been deleted.');
     }
 
     protected function getCategory()
@@ -120,5 +143,14 @@ class ProductController extends Controller
         }
 
         return $arrParent;
+    }
+
+    private function fileUpload($request, $fileName)
+    {
+        $imageTempName = $request->file($fileName)->getPathname();
+        $imageName = $request->file($fileName)->getClientOriginalName();
+        $path = base_path() . '/public/uploads/consultants/images/';
+        $request->file($fileName)->move($path , $imageName);
+        return $imageName;
     }
 }

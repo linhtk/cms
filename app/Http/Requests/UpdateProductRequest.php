@@ -4,7 +4,7 @@ namespace cms\Http\Requests;
 
 use cms\Http\Requests\Request;
 
-class StoreProductRequest extends Request
+class UpdateProductRequest extends Request
 {
     /**
      * Determine if the user is authorized to make this request.
